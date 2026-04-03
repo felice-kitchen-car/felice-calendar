@@ -282,12 +282,16 @@ function getMonthEvents(){
 
 function getDateEvents(d){
   const target = new Date(cy,cm,d);
+  const targetStr = `${cy}-${String(cm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
   return allEvents.filter(e=>{
     if(e.description && e.description.includes('FELICE_INFO')) return false;
     if(e.summary && e.summary.includes('FELICE_INFO')) return false;
     if(e.summary && e.summary.includes('📢')) return false;
-    const end = new Date(e.end); if(!e.hasTime) end.setDate(end.getDate()-1);
-    return e.start <= target && target <= end;
+    const startStr = `${e.start.getFullYear()}-${String(e.start.getMonth()+1).padStart(2,'0')}-${String(e.start.getDate()).padStart(2,'0')}`;
+    const endD = new Date(e.end);
+    if(!e.hasTime) endD.setDate(endD.getDate()-1);
+    const endStr = `${endD.getFullYear()}-${String(endD.getMonth()+1).padStart(2,'0')}-${String(endD.getDate()).padStart(2,'0')}`;
+    return startStr <= targetStr && targetStr <= endStr;
   });
 }
 
