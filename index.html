@@ -257,6 +257,8 @@ function parseICS(text){
 function getMonthEvents(){
   return allEvents.filter(e => {
     if(e.description && e.description.includes('FELICE_INFO')) return false;
+    if(e.summary && e.summary.includes('FELICE_INFO')) return false;
+    if(e.summary && e.summary.includes('📢')) return false;
     const endD = new Date(e.end); if(!e.hasTime) endD.setDate(endD.getDate()-1);
     return (e.start.getFullYear()===cy && e.start.getMonth()===cm) ||
            (endD.getFullYear()===cy && endD.getMonth()===cm);
@@ -271,6 +273,8 @@ function getDateEvents(d){
   const target = new Date(cy,cm,d);
   return allEvents.filter(e=>{
     if(e.description && e.description.includes('FELICE_INFO')) return false;
+    if(e.summary && e.summary.includes('FELICE_INFO')) return false;
+    if(e.summary && e.summary.includes('📢')) return false;
     const end = new Date(e.end); if(!e.hasTime) end.setDate(end.getDate()-1);
     return e.start <= target && target <= end;
   });
