@@ -446,6 +446,12 @@ async function retryFetch(){
 
 (async()=>{ await Promise.all([fetchEvents(), loadFromGist()]); render(); renderInfoBar(); initAdmin(); })();
 
+// 30秒ごとにインフォを自動更新
+setInterval(async()=>{
+  await loadFromGist();
+  applyAdminToPage();
+}, 30000);
+
 // ===== ADMIN PANEL =====
 const ADMIN_PASS = 'm1100286';
 const DEFAULT_MENUS = ['マルゲリータ','クワトロフォルマッジ','ディアボラ','ビアンカ','サルシッチャ','バジルペスト','トマトバジル','照り焼きチキン','季節の特製ピザ','本日のおすすめ'];
@@ -461,7 +467,7 @@ let GH_TOKEN = sessionStorage.getItem('gh_token') || _a.join('');
 
 async function loadFromGist(){
   try {
-    const res = await fetch(`https://cdn.jsdelivr.net/gh/${GH_OWNER}/${GH_REPO}@main/${GH_FILE}?t=${Date.now()}`, {cache: 'no-store'});
+    const res = await fetch(`https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/${GH_FILE}?t=${Date.now()}`, {cache:'no-store'});
     if(!res.ok) return;
     const json = await res.json();
     adminInfo = json.info || {status:'',msg:''};
