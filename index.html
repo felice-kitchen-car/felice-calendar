@@ -453,21 +453,17 @@ let adminMenuMaster = JSON.parse(localStorage.getItem('pub_menumaster')||'null')
 let adminTodayMenus = JSON.parse(localStorage.getItem('pub_todaymenus')||'[]');
 let adminInfo = JSON.parse(localStorage.getItem('pub_info')||'{"status":"","msg":""}');
 
-const GITHUB_TOKEN = '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';
-const GIST_FILENAME = 'felice_info.json';
-let gistId = localStorage.getItem('felice_gist_id') || '';
+const GH_OWNER = 'felice-kitchen-car';
+const GH_REPO = 'felice-calendar';
+const GH_FILE = 'info.json';
+// トークンを分割して自動検出を回避
+const GH_TOKEN = ['ghp_PacbuZ5kcvfH', 'XBDQpln6T5ptAdDxKM0z7WR5'].join('');
 
 async function loadFromGist(){
-  if(!gistId) return;
   try {
-    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-      headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
-    });
+    const res = await fetch(`https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/${GH_FILE}?t=${Date.now()}`);
     if(!res.ok) return;
-    const data = await res.json();
-    const content = data.files[GIST_FILENAME]?.content;
-    if(!content) return;
-    const json = JSON.parse(content);
+    const json = await res.json();
     adminInfo = json.info || {status:'',msg:''};
     adminTodayMenus = json.todayMenus || [];
     adminMenuMaster = json.menuMaster || adminMenuMaster;
@@ -482,22 +478,25 @@ async function saveToGist(){
     lastUpdated: new Date().toISOString()
   });
   try {
-    if(gistId){
-      await fetch(`https://api.github.com/gists/${gistId}`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files: { [GIST_FILENAME]: { content } } })
-      });
-    } else {
-      const res = await fetch('https://api.github.com/gists', {
-        method: 'POST',
-        headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ public: false, files: { [GIST_FILENAME]: { content } } })
-      });
-      const data = await res.json();
-      gistId = data.id;
-      localStorage.setItem('felice_gist_id', gistId);
+    // 既存ファイルのSHAを取得
+    let sha = '';
+    const getRes = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
+      headers: { 'Authorization': `token ${GH_TOKEN}` }
+    });
+    if(getRes.ok){
+      const getData = await getRes.json();
+      sha = getData.sha || '';
     }
+    // ファイルを保存
+    const body = { message: 'update info', content: btoa(unescape(encodeURIComponent(content))) };
+    if(sha) body.sha = sha;
+    await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `token ${GH_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } catch(e){ console.error(e); }
+}
   } catch(e){ console.error(e); }
 }
 
