@@ -467,7 +467,10 @@ let GH_TOKEN = sessionStorage.getItem('gh_token') || _a.join('');
 
 async function loadFromGist(){
   try {
-    const res = await fetch(`https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/${GH_FILE}?t=${Date.now()}`, {cache:'no-store'});
+    const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
+      headers: { 'Accept': 'application/vnd.github.v3.raw', 'Cache-Control': 'no-cache' },
+      cache: 'no-store'
+    });
     if(!res.ok) return;
     const json = await res.json();
     adminInfo = json.info || {status:'',msg:''};
