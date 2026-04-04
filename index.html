@@ -182,7 +182,8 @@ let loaded = false;
 
 async function fetchEvents(){
   try {
-    const timeMin = new Date(cy, cm - 2, 1).toISOString();
+    const now = new Date();
+    const timeMin = new Date(now.getFullYear(), now.getMonth()-1, 1).toISOString();
     const timeMax = new Date(cy, cm + 3, 1).toISOString();
     const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events?key=${API_KEY}&timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=250`;
     const res = await fetch(url);
@@ -443,7 +444,7 @@ async function retryFetch(){
   renderInfoBar();
 }
 
-(async()=>{ await fetchEvents(); render(); renderInfoBar(); initAdmin(); })();
+(async()=>{ await Promise.all([fetchEvents(), loadFromGist()]); render(); renderInfoBar(); initAdmin(); })();
 
 // ===== ADMIN PANEL =====
 const ADMIN_PASS = 'm1100286';
@@ -452,11 +453,57 @@ let adminMenuMaster = JSON.parse(localStorage.getItem('pub_menumaster')||'null')
 let adminTodayMenus = JSON.parse(localStorage.getItem('pub_todaymenus')||'[]');
 let adminInfo = JSON.parse(localStorage.getItem('pub_info')||'{"status":"","msg":""}');
 
-function saveAdmin(){
-  localStorage.setItem('pub_menumaster', JSON.stringify(adminMenuMaster));
-  localStorage.setItem('pub_todaymenus', JSON.stringify(adminTodayMenus));
+const GITHUB_TOKEN = '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';
+const GIST_FILENAME = 'felice_info.json';
+let gistId = localStorage.getItem('felice_gist_id') || '';
+
+async function loadFromGist(){
+  if(!gistId) return;
+  try {
+    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+      headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
+    });
+    if(!res.ok) return;
+    const data = await res.json();
+    const content = data.files[GIST_FILENAME]?.content;
+    if(!content) return;
+    const json = JSON.parse(content);
+    adminInfo = json.info || {status:'',msg:''};
+    adminTodayMenus = json.todayMenus || [];
+    adminMenuMaster = json.menuMaster || adminMenuMaster;
+  } catch(e){ console.error(e); }
+}
+
+async function saveToGist(){
+  const content = JSON.stringify({
+    info: adminInfo,
+    todayMenus: adminTodayMenus,
+    menuMaster: adminMenuMaster,
+    lastUpdated: new Date().toISOString()
+  });
+  try {
+    if(gistId){
+      await fetch(`https://api.github.com/gists/${gistId}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: { [GIST_FILENAME]: { content } } })
+      });
+    } else {
+      const res = await fetch('https://api.github.com/gists', {
+        method: 'POST',
+        headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ public: false, files: { [GIST_FILENAME]: { content } } })
+      });
+      const data = await res.json();
+      gistId = data.id;
+      localStorage.setItem('felice_gist_id', gistId);
+    }
+  } catch(e){ console.error(e); }
+}
+
+async function saveAdmin(){
   adminInfo.lastUpdated = new Date().toISOString();
-  localStorage.setItem('pub_info', JSON.stringify(adminInfo));
+  await saveToGist();
   applyAdminToPage();
 }
 
@@ -493,7 +540,8 @@ function applyAdminToPage(){
   }
 }
 
-function initAdmin(){
+async function initAdmin(){
+  await loadFromGist();
   applyAdminToPage();
   if(location.search.includes('admin')){
     document.getElementById('adminPanel').style.display='block';
@@ -559,18 +607,23 @@ function addAdminMenu(){
   renderAdminMenus();
 }
 
-function applyAndSave(){
+async function applyAndSave(){
   adminInfo.status=document.getElementById('adminStatus').value;
   adminInfo.msg=document.getElementById('adminMsg').value.trim();
-  saveAdmin();
+  const btn = document.querySelector('#adminMain button[onclick="applyAndSave()"]');
+  if(btn){ btn.textContent='保存中...'; btn.disabled=true; }
+  await saveAdmin();
+  applyAdminToPage();
+  if(btn){ btn.textContent='保存して反映'; btn.disabled=false; }
   document.getElementById('adminSaved').style.display='block';
   setTimeout(()=>document.getElementById('adminSaved').style.display='none',2000);
 }
 
-function clearStatus(){
+async function clearStatus(){
   adminInfo.status=''; adminInfo.msg='';
   adminTodayMenus=[];
-  saveAdmin();
+  await saveAdmin();
+  applyAdminToPage();
   renderAdminPanel();
 }
 </script>
