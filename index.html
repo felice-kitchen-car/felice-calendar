@@ -446,11 +446,11 @@ async function retryFetch(){
 
 (async()=>{ await Promise.all([fetchEvents(), loadFromGist()]); render(); renderInfoBar(); initAdmin(); })();
 
-// 30秒ごとにインフォを自動更新
+// 10秒ごとにインフォを自動更新
 setInterval(async()=>{
   await loadFromGist();
   applyAdminToPage();
-}, 30000);
+}, 10000);
 
 // ===== ADMIN PANEL =====
 const ADMIN_PASS = 'm1100286';
@@ -467,10 +467,7 @@ let GH_TOKEN = sessionStorage.getItem('gh_token') || _a.join('');
 
 async function loadFromGist(){
   try {
-    const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
-      headers: { 'Accept': 'application/vnd.github.v3.raw', 'Cache-Control': 'no-cache' },
-      cache: 'no-store'
-    });
+    const res = await fetch(`https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/${GH_FILE}?t=${Date.now()}`, {cache:'no-store'});
     if(!res.ok) return;
     const json = await res.json();
     adminInfo = json.info || {status:'',msg:''};
@@ -552,6 +549,9 @@ async function initAdmin(){
   applyAdminToPage();
   if(location.search.includes('admin')){
     document.getElementById('adminPanel').style.display='block';
+    document.getElementById('adminLogin').style.display='none';
+    document.getElementById('adminMain').style.display='block';
+    renderAdminPanel();
   }
 }
 
@@ -620,6 +620,9 @@ async function applyAndSave(){
   const btn = document.querySelector('#adminMain button[onclick="applyAndSave()"]');
   if(btn){ btn.textContent='保存中...'; btn.disabled=true; }
   await saveAdmin();
+  // 保存後2秒待って最新データを再取得
+  await new Promise(r=>setTimeout(r,2000));
+  await loadFromGist();
   applyAdminToPage();
   if(btn){ btn.textContent='保存して反映'; btn.disabled=false; }
   document.getElementById('adminSaved').style.display='block';
