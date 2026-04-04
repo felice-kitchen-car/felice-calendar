@@ -461,7 +461,7 @@ let GH_TOKEN = sessionStorage.getItem('gh_token') || _a.join('');
 
 async function loadFromGist(){
   try {
-    const res = await fetch(`https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/${GH_FILE}?t=${Date.now()}`);
+    const res = await fetch(`https://cdn.jsdelivr.net/gh/${GH_OWNER}/${GH_REPO}@main/${GH_FILE}?t=${Date.now()}`, {cache: 'no-store'});
     if(!res.ok) return;
     const json = await res.json();
     adminInfo = json.info || {status:'',msg:''};
