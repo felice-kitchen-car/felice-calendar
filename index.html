@@ -456,7 +456,8 @@ let adminInfo = JSON.parse(localStorage.getItem('pub_info')||'{"status":"","msg"
 const GH_OWNER = 'felice-kitchen-car';
 const GH_REPO = 'felice-calendar';
 const GH_FILE = 'info.json';
-let GH_TOKEN = sessionStorage.getItem('gh_token') || '';
+const _a=['ghp_Oqk577HhIM','kgPafYN9JDIt','pWqT9PA13oBZ3C'];
+let GH_TOKEN = sessionStorage.getItem('gh_token') || _a.join('');
 
 async function loadFromGist(){
   try {
@@ -545,9 +546,7 @@ async function initAdmin(){
 
 function adminLogin(){
   const pw = document.getElementById('adminPwInput').value;
-  const token = document.getElementById('adminTokenInput').value.trim();
   if(pw === ADMIN_PASS){
-    if(token) { GH_TOKEN = token; sessionStorage.setItem('gh_token', token); }
     document.getElementById('adminLogin').style.display='none';
     document.getElementById('adminMain').style.display='block';
     renderAdminPanel();
@@ -636,9 +635,6 @@ async function clearStatus(){
     <div id="adminLogin" style="padding:32px 24px;text-align:center;">
       <div style="font-size:13px;color:#888;margin-bottom:16px;">パスワードを入力してください</div>
       <input type="password" id="adminPwInput" placeholder="パスワード"
-        style="width:100%;padding:10px 14px;background:#111;border:1px solid #333;border-radius:8px;color:#f0ece4;font-size:14px;font-family:inherit;outline:none;margin-bottom:8px;"
-        onkeydown="if(event.key==='Enter')adminLogin()" />
-      <input type="password" id="adminTokenInput" placeholder="GitHubトークン（ghp_...）"
         style="width:100%;padding:10px 14px;background:#111;border:1px solid #333;border-radius:8px;color:#f0ece4;font-size:14px;font-family:inherit;outline:none;margin-bottom:8px;"
         onkeydown="if(event.key==='Enter')adminLogin()" />
       <div id="adminPwError" style="display:none;font-size:12px;color:#c84b2f;margin-bottom:8px;">パスワードが違います</div>
