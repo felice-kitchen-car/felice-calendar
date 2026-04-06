@@ -450,8 +450,9 @@ async function retryFetch(){
 
 (async()=>{ await Promise.all([fetchEvents(), loadFromGist()]); render(); renderInfoBar(); initAdmin(); })();
 
-// 10秒ごとにインフォを自動更新
+// 10秒ごとにインフォを自動更新（管理パネルが開いていない時のみ）
 setInterval(async()=>{
+  if(document.getElementById('adminPanel').style.display !== 'none') return;
   await loadFromGist();
   applyAdminToPage();
 }, 10000);
