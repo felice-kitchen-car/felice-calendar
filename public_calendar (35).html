@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FELICE Business Calendar</title>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;700&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1c1a17; --ink2: #6b6560; --ink3: #a8a29e;
+  --paper: #faf8f4; --paper2: #f0ece4; --paper3: #e8e0d4;
+  --accent: #c84b2f; --accent2: #e8956d;
+  --radius: 4px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans JP', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-6px); opacity: 1; }
+}
+
+.hero {
+  background: var(--ink); color: var(--paper);
+  padding: 48px 24px 40px; text-align: center; position: relative;
+}
+.hero::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(255,255,255,0.015) 40px, rgba(255,255,255,0.015) 41px);
+  z-index: 0;
+}
+.hero > * { position: relative; z-index: 1; }
+.hero-eyebrow { font-size: 11px; letter-spacing: 0.2em; color: var(--accent2); font-weight: 400; margin-bottom: 12px; animation: fadeUp 0.6s ease both; }
+.hero-title { font-family: 'Shippori Mincho', serif; font-size: clamp(28px, 6vw, 44px); font-weight: 700; letter-spacing: 0.05em; line-height: 1.2; animation: fadeUp 0.6s 0.1s ease both; margin-bottom: 8px; }
+.hero-sub { font-size: 13px; color: rgba(255,255,255,0.5); font-weight: 300; animation: fadeUp 0.6s 0.2s ease both; }
+.hero-line { width: 40px; height: 1px; background: var(--accent); margin: 16px auto 0; animation: fadeUp 0.6s 0.3s ease both; }
+
+.nav-bar {
+  background: var(--paper); border-bottom: 1px solid var(--paper3);
+  padding: 12px 24px; display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+}
+.nav-month { font-family: 'Shippori Mincho', serif; font-size: 18px; font-weight: 500; letter-spacing: 0.05em; }
+.nav-btns { display: flex; gap: 8px; }
+.nav-btn {
+  width: 36px; height: 36px; border: 1px solid var(--paper3); border-radius: 50%;
+  background: var(--paper); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--ink); transition: all 0.15s;
+}
+.nav-btn:hover { background: var(--paper2); }
+
+@media (max-width: 600px) {
+  .cal-cell { min-height: 72px; padding: 6px 4px; }
+  .event-dot { font-size: 10px; padding: 2px 3px; }
+  .hero { padding: 36px 16px 32px; }
+  .main { padding: 16px 8px 40px; }
+}
+
+.main { max-width: 100%; margin: 0 auto; padding: 24px 24px 60px; }
+
+.loading { text-align: center; padding: 60px 0; font-size: 13px; color: var(--ink3); letter-spacing: 0.1em; }
+.loading-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin: 0 3px; animation: bounce 1.2s infinite; }
+.loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+.cal-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 32px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(80px, 1fr)); gap: 1px; background: var(--paper3); border: 1px solid var(--paper3); border-radius: 8px; overflow: hidden; min-width: 560px; }
+.cal-head-cell { background: var(--ink); color: var(--paper); text-align: center; padding: 10px 4px; font-size: 12px; letter-spacing: 0.08em; font-weight: 400; }
+.cal-head-cell:first-child { color: #f87171; }
+.cal-head-cell:last-child { color: #93c5fd; }
+.cal-cell { background: var(--paper); min-height: 130px; padding: 8px 6px; transition: background 0.1s; min-width: 0; overflow: hidden; position: relative; }
+.cal-cell.has-event { cursor: pointer; }
+.cal-cell.has-event:hover { background: var(--paper2); }
+.cal-cell.empty { background: var(--paper2); opacity: 0.5; }
+.cal-cell.today { background: #fff8f5; border: 2px solid var(--accent); }
+.cal-cell.today::after { content: '今日'; position: absolute; top: 4px; right: 4px; font-size: 9px; color: var(--accent); font-weight: 700; letter-spacing: 0.05em; }
+.cell-num { font-size: 12px; color: var(--ink3); margin-bottom: 5px; font-weight: 400; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.cal-cell.sunday .cell-num { color: #dc2626; }
+.cal-cell.saturday .cell-num { color: #2563eb; }
+.cal-cell.today .cell-num { background: var(--accent); color: #fff; font-weight: 700; }
+.event-dot {
+  width: 100%; font-size: 11px; padding: 3px 6px; border-radius: 3px; margin-bottom: 3px;
+  overflow: hidden; background: var(--accent); color: #fff; line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.insta-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+  color: #fff; border: none; border-radius: 999px;
+  padding: 8px 16px; font-size: 13px; font-weight: 500; font-family: inherit;
+  cursor: pointer; text-decoration: none; transition: opacity .15s;
+}
+.insta-btn:hover { opacity: .88; }
+
+@media (max-width: 600px) {
+  .main { padding: 16px 12px 60px; }
+  .cal-wrapper { margin: 0 -12px 32px; padding: 0 12px; }
+}
+
+.events-section-title { font-family: 'Shippori Mincho', serif; font-size: 15px; font-weight: 500; letter-spacing: 0.05em; color: var(--ink2); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--paper3); }
+.event-card { background: var(--paper); border: 1px solid var(--paper3); border-left: 3px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 16px; margin-bottom: 10px; animation: fadeUp 0.4s ease both; }
+.event-card-date { font-size: 11px; color: var(--accent); letter-spacing: 0.08em; font-weight: 500; margin-bottom: 4px; }
+.event-card-title { font-family: 'Shippori Mincho', serif; font-size: 16px; font-weight: 500; color: var(--ink); margin-bottom: 8px; line-height: 1.4; }
+.event-card-meta { display: flex; flex-direction: column; gap: 4px; }
+.event-card-row { font-size: 12px; color: var(--ink2); display: flex; align-items: flex-start; gap: 6px; }
+.meta-icon { width: 14px; height: 14px; min-width: 14px; min-height: 14px; flex-shrink: 0; margin-top: 1px; opacity: 0.6; }
+.empty-month { text-align: center; padding: 40px 20px; color: var(--ink3); font-size: 13px; letter-spacing: 0.05em; }
+.error-msg { text-align: center; padding: 40px 20px; font-size: 13px; color: var(--ink2); background: var(--paper2); border-radius: 8px; border: 1px solid var(--paper3); }
+.footer { text-align: center; padding: 32px 16px; font-size: 11px; color: var(--ink3); letter-spacing: 0.08em; border-top: 1px solid var(--paper3); }
+
+.info-bar {
+  display: none; padding: 12px 24px;
+  font-size: 13px; font-weight: 500; text-align: center;
+  position: sticky; top: 0; z-index: 99;
+  animation: fadeUp 0.4s ease both;
+}
+.info-bar.show { display: block; }
+.info-bar.status-open { background: #2d7a4f; color: #fff; }
+.info-bar.status-busy { background: #b7770d; color: #fff; }
+.info-bar.status-closing_soon { background: #c84b2f; color: #fff; }
+.info-bar.status-closed_early { background: #c0392b; color: #fff; }
+.info-bar.status-cancelled { background: #444; color: #fff; }
+.info-bar a { color: #fff; text-decoration: underline; }
+
+.today-menu-bar {
+  background: var(--paper2); border-bottom: 1px solid var(--paper3);
+  padding: 10px 24px; font-size: 12px; color: var(--ink2);
+  display: none;
+}
+.today-menu-bar.show { display: block; }
+.today-menu-bar strong { color: var(--ink); font-weight: 500; }
+
+.last-updated {
+  text-align: right; font-size: 11px; color: var(--ink3);
+  padding: 6px 0 0; letter-spacing: 0.05em;
+}
+
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="hero-eyebrow">FELICE KITCHEN CAR</div>
+  <div class="hero-title">Business Calendar</div>
+  <div class="hero-sub">最新の出店情報をチェックしてください</div>
+  <div class="hero-line"></div>
+  <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+    <a href="https://www.instagram.com/felice_foodtruck/" class="insta-btn" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:500;font-family:inherit;text-decoration:none;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+      @felice_foodtruck
+    </a>
+    <a href="https://lin.ee/pdPfs3t" target="_blank" rel="noopener" onclick="window.location.href='https://lin.ee/pdPfs3t'" style="display:inline-flex;align-items:center;gap:6px;background:#06C755;color:#fff;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:500;font-family:inherit;text-decoration:none;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+      公式LINE
+    </a>
+  </div>
+</div>
+<div id="infoBar" class="info-bar"></div>
+<div id="todayMenuBar" class="today-menu-bar"></div>
+<div class="nav-bar">
+  <button class="nav-btn" onclick="changeMonth(-1)">&#8249;</button>
+  <div class="nav-month" id="monthLabel"></div>
+  <button class="nav-btn" onclick="changeMonth(1)">&#8250;</button>
+</div>
+<div class="main">
+  <div id="lastUpdated" class="last-updated"></div>
+  <div id="content">
+    <div class="loading">
+      <span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>
+    </div>
+  </div>
+</div>
+<div class="footer">© FELICE Business Calendar</div>
+
+<script>
+const API_KEY = 'AIzaSyCAIFXUThYs_nnz002j9Id70XBQ6H3P8Lk';
+const CALENDAR_ID = 'e5ac2f1a6abfd1d0c52d026a9911ca98408ae7a642b6f26eedb7203478996e10@group.calendar.google.com';
+const DOW = ['日','月','火','水','木','金','土'];
+const today = new Date();
+let cy = today.getFullYear(), cm = today.getMonth();
+let allEvents = [];
+let loaded = false;
+
+async function fetchEvents(){
+  try {
+    const now = new Date();
+    const timeMin = new Date(now.getFullYear(), now.getMonth()-1, 1).toISOString();
+    const timeMax = new Date(cy, cm + 3, 1).toISOString();
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events?key=${API_KEY}&timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=250`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('API error ' + res.status);
+    const data = await res.json();
+    allEvents = parseAPIEvents(data.items || []);
+    loaded = true;
+  } catch(e){
+    console.error(e);
+    loaded = false;
+  }
+}
+
+function parseAPIEvents(items){
+  return items.map(item => {
+    const summary = item.summary || '';
+    const location = item.location || '';
+    const description = item.description || '';
+    const startRaw = item.start.dateTime || item.start.date;
+    const endRaw = item.end.dateTime || item.end.date;
+    const hasTime = !!item.start.dateTime;
+    const start = new Date(startRaw);
+    const end = new Date(endRaw);
+    let startTime = null, endTime = null;
+    if(hasTime){
+      startTime = `${String(start.getHours()).padStart(2,'0')}:${String(start.getMinutes()).padStart(2,'0')}`;
+      endTime = `${String(end.getHours()).padStart(2,'0')}:${String(end.getMinutes()).padStart(2,'0')}`;
+    }
+    return { summary, location, description, start, end, startTime, endTime, hasTime };
+  });
+}
+
+function parseICS(text){
+  const events = [];
+  const blocks = text.split('BEGIN:VEVENT');
+  blocks.slice(1).forEach(block => {
+    const get = (key) => {
+      const m = block.match(new RegExp(key + '(?:;[^:]*)?:([^\r\n]+)'));
+      return m ? m[1].trim() : '';
+    };
+    const getFullLine = (key) => {
+      const m = block.match(new RegExp('(' + key + '(?:;[^:]*)?:[^\r\n]+)'));
+      return m ? m[1].trim() : '';
+    };
+    const summary = get('SUMMARY').replace(/\\,/g,',').replace(/\\n/g,' ');
+    const location = get('LOCATION').replace(/\\,/g,',').replace(/\\n/g,' ');
+    const dtstart = get('DTSTART');
+    const dtend = get('DTEND');
+    const dtstartFull = getFullLine('DTSTART');
+    const dtendFull = getFullLine('DTEND');
+    const description = get('DESCRIPTION').replace(/\\,/g,',').replace(/\\n/g,' ');
+
+    const parseDateTime = (s, fullLine) => {
+      if(!s) return null;
+      const isUTC = s.endsWith('Z');
+      const hasTZID = fullLine && fullLine.includes('TZID');
+      const digits = s.replace(/[^0-9]/g,'');
+      if(digits.length >= 12) {
+        const y=parseInt(digits.slice(0,4)), mo=parseInt(digits.slice(4,6))-1, d=parseInt(digits.slice(6,8));
+        let h=parseInt(digits.slice(8,10)), mi=parseInt(digits.slice(10,12));
+        if(isUTC && !hasTZID) {
+          h += 9;
+          if(h >= 24) { h -= 24; }
+        }
+        return { date: new Date(y,mo,d), time: `${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}`, hasTime: true };
+      }
+      if(digits.length >= 8) {
+        const y=parseInt(digits.slice(0,4)), mo=parseInt(digits.slice(4,6))-1, d=parseInt(digits.slice(6,8));
+        return { date: new Date(y,mo,d), time: null, hasTime: false };
+      }
+      return null;
+    };
+
+    const start = parseDateTime(dtstart, dtstartFull);
+    const end = parseDateTime(dtend, dtendFull);
+    if(start && summary){
+      events.push({ summary, location, description, start: start.date, startTime: start.time, end: end ? end.date : start.date, endTime: end ? end.time : null, hasTime: start.hasTime });
+    }
+  });
+  return events;
+}
+
+function getMonthEvents(){
+  return allEvents.filter(e => {
+    if(e.description && e.description.includes('FELICE_INFO')) return false;
+    if(e.summary && e.summary.includes('FELICE_INFO')) return false;
+    if(e.summary && e.summary.includes('📢')) return false;
+    const endD = new Date(e.end); if(!e.hasTime) endD.setDate(endD.getDate()-1);
+    return (e.start.getFullYear()===cy && e.start.getMonth()===cm) ||
+           (endD.getFullYear()===cy && endD.getMonth()===cm);
+  }).sort((a,b)=>{
+    if(a.start - b.start !== 0) return a.start - b.start;
+    if(a.startTime && b.startTime) return a.startTime.localeCompare(b.startTime);
+    return 0;
+  });
+}
+
+function getDateEvents(d){
+  const target = new Date(cy,cm,d);
+  const targetStr = `${cy}-${String(cm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  return allEvents.filter(e=>{
+    if(e.description && e.description.includes('FELICE_INFO')) return false;
+    if(e.summary && e.summary.includes('FELICE_INFO')) return false;
+    if(e.summary && e.summary.includes('📢')) return false;
+    const startStr = `${e.start.getFullYear()}-${String(e.start.getMonth()+1).padStart(2,'0')}-${String(e.start.getDate()).padStart(2,'0')}`;
+    const endD = new Date(e.end);
+    if(!e.hasTime) endD.setDate(endD.getDate()-1);
+    const endStr = `${endD.getFullYear()}-${String(endD.getMonth()+1).padStart(2,'0')}-${String(endD.getDate()).padStart(2,'0')}`;
+    return startStr <= targetStr && targetStr <= endStr;
+  });
+}
+
+function formatDate(d){
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 (${DOW[d.getDay()]})`;
+}
+
+function render(){
+  document.getElementById('monthLabel').textContent=`${cy}年${cm+1}月`;
+  const content = document.getElementById('content');
+  if(!loaded){
+    content.innerHTML=`<div class="error-msg">カレンダーの読み込みに失敗しました。<br><br>
+      <button onclick="retryFetch()" style="padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit;">再読み込みする</button>
+    </div>`;
+    return;
+  }
+
+  const first = new Date(cy,cm,1).getDay();
+  const daysInMonth = new Date(cy,cm+1,0).getDate();
+  const monthEvents = getMonthEvents();
+
+  let calHTML = '<div class="cal-wrapper"><div class="cal-grid">';
+  DOW.forEach(d=>calHTML+=`<div class="cal-head-cell">${d}</div>`);
+  for(let i=0;i<first;i++) calHTML+=`<div class="cal-cell empty"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const dow=new Date(cy,cm,d).getDay();
+    const isToday=d===today.getDate()&&cm===today.getMonth()&&cy===today.getFullYear();
+    const de=getDateEvents(d);
+    const cls=['cal-cell',isToday?'today':'',dow===0?'sunday':dow===6?'saturday':'',de.length?'has-event':''].filter(Boolean).join(' ');
+    const dots=de.slice(0,2).map(e=>{
+      const isChanged = e.summary.includes('【変更】');
+      const bg = isChanged ? '#d97706' : 'var(--accent)';
+      const cleanTitle = e.summary.replace('【変更】','').trim();
+      return `<div class="event-dot" style="background:${bg};">
+        ${isChanged?`<div style="font-size:9px;font-weight:700;letter-spacing:0.05em;margin-bottom:2px;opacity:0.9;">⚠ 変更あり</div>`:''}
+        <div style="font-weight:500;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${cleanTitle}</div>
+        ${e.location?`<a href="https://maps.google.com/?q=${encodeURIComponent(e.location)}" target="_blank" onclick="event.stopPropagation()" style="display:block;font-size:10px;opacity:0.9;margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;color:#fff;text-decoration:underline;text-underline-offset:2px;">${e.location}</a>`:''}
+      </div>`;
+    }).join('');
+    const more=de.length>2?`<div style="font-size:10px;color:var(--ink3);padding:1px 4px;">+${de.length-2}</div>`:'';
+    calHTML+=`<div class="${cls}"><div class="cell-num">${d}</div>${dots}${more}</div>`;
+  }
+  calHTML+='</div></div>';
+
+  let listHTML='';
+  if(!monthEvents.length){
+    listHTML=`<div class="empty-month">この月の出店予定はありません</div>`;
+  } else {
+    listHTML=`<div class="events-section-title">${cy}年${cm+1}月の出店予定</div>`;
+    monthEvents.forEach((e,i)=>{
+      const endD=new Date(e.end); if(!e.hasTime) endD.setDate(endD.getDate()-1);
+      const isSameDay=e.start.toDateString()===endD.toDateString();
+      const dateStr=isSameDay?formatDate(e.start):`${formatDate(e.start)} 〜 ${formatDate(endD)}`;
+      const isChanged = e.summary.includes('【変更】');
+      const cleanTitle = e.summary.replace('【変更】','').trim();
+
+      let timeStr='';
+      if(e.hasTime && e.startTime){
+        timeStr=e.endTime?`${e.startTime} 〜 ${e.endTime}`:e.startTime;
+      }
+
+      const timeSVG=`<svg class="meta-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>`;
+      const locSVG=`<svg class="meta-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5C5.5 1.5 3.5 3.5 3.5 6c0 3.5 4.5 8.5 4.5 8.5s4.5-5 4.5-8.5c0-2.5-2-4.5-4.5-4.5z"/><circle cx="8" cy="6" r="1.5"/></svg>`;
+      const linkSVG=`<svg class="meta-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.5 9.5L9.5 6.5M7 4H4.5A2 2 0 002.5 6v5.5A2 2 0 004.5 13.5H10A2 2 0 0012 11.5V9M9.5 2H13.5V6"/></svg>`;
+
+      // descriptionからURLと不要なFELICE_INFO行を除去してクリーンに
+      let cleanDesc='', eventUrl='';
+      if(e.description && !e.description.includes('FELICE_INFO')){
+        const lines=e.description.split(/\\n|\n/);
+        const urlLine=lines.find(l=>l.startsWith('🔗 '));
+        if(urlLine) eventUrl=urlLine.replace('🔗 ','').trim();
+        const statusLabels=['🟢 営業中','🟡 混雑中','🟠 まもなく終了','🔴 早期終了','⛔ 中止'];
+        cleanDesc=lines.filter(l=>l&&!l.startsWith('🔗 ')&&!statusLabels.some(s=>l.includes(s))).join(' ').trim();
+      }
+
+      listHTML+=`<div class="event-card" style="animation-delay:${i*0.05}s;border-left-color:${isChanged?'#d97706':'var(--accent)'};${isChanged?'background:#fffbeb;':''}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <div class="event-card-date">${dateStr}</div>
+          ${isChanged?`<span style="font-size:11px;font-weight:700;background:#d97706;color:#fff;padding:2px 8px;border-radius:4px;">⚠ 変更あり</span>`:''}
+        </div>
+        <div class="event-card-title">${cleanTitle}</div>
+        <div class="event-card-meta">
+          ${timeStr?`<div class="event-card-row">${timeSVG}<span>${timeStr}</span></div>`:''}
+          ${e.location?`<div class="event-card-row"><a href="https://maps.google.com/?q=${encodeURIComponent(e.location)}" target="_blank" style="display:flex;align-items:flex-start;gap:6px;color:var(--accent);text-decoration:none;">${locSVG}<span style="text-decoration:underline;text-underline-offset:2px;">${e.location}</span></a></div>`:''}
+          ${eventUrl?`<div class="event-card-row"><a href="${eventUrl}" target="_blank" style="display:flex;align-items:flex-start;gap:6px;color:#2471a3;text-decoration:none;">${linkSVG}<span style="text-decoration:underline;text-underline-offset:2px;">イベント詳細・SNSをチェック</span></a></div>`:''}
+          ${cleanDesc?`<div class="event-card-row" style="color:var(--ink3);font-size:11px;margin-top:2px;padding-left:20px;">${cleanDesc}</div>`:''}
+        </div>
+      </div>`;
+    });
+  }
+  content.innerHTML = calHTML + '<div class="events-list">'+listHTML+'</div>';
+}
+
+function renderInfoBar(){
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const infoEvent = allEvents.find(e=>{
+    const ds=`${e.start.getFullYear()}-${String(e.start.getMonth()+1).padStart(2,'0')}-${String(e.start.getDate()).padStart(2,'0')}`;
+    return ds===todayStr && e.description && e.description.includes('FELICE_INFO');
+  });
+
+  const infoBar = document.getElementById('infoBar');
+  const menuBar = document.getElementById('todayMenuBar');
+  const lastUpdated = document.getElementById('lastUpdated');
+
+  if(infoEvent){
+    const desc = infoEvent.description;
+    const lines = desc.split(/\n|\\n/);
+
+    const statusMap = {
+      '🟢 営業中':'open','🟡 混雑中':'busy',
+      '🟠 まもなく終了':'closing_soon','🔴 早期終了':'closed_early','⛔ 中止':'cancelled'
+    };
+    let statusClass='', statusText='';
+    for(const [label,cls] of Object.entries(statusMap)){
+      if(desc.includes(label)){ statusClass=cls; statusText=label; break; }
+    }
+
+    const msgLine = lines.find(l=>l&&!Object.keys(statusMap).some(s=>l.includes(s))&&!l.includes('FELICE_INFO')&&!l.includes('本日のメニュー')&&!l.includes('最終更新'));
+
+    if(statusClass){
+      infoBar.className=`info-bar show status-${statusClass}`;
+      infoBar.textContent=`${statusText}${msgLine?' — '+msgLine:''}`;
+    } else if(msgLine){
+      infoBar.className='info-bar show status-busy';
+      infoBar.textContent=`📢 ${msgLine}`;
+    }
+
+    const menuLine = lines.find(l=>l.includes('本日のメニュー：'));
+    if(menuLine){
+      menuBar.className='today-menu-bar show';
+      menuBar.innerHTML=`<strong>🍕 本日のメニュー：</strong>${menuLine.replace('本日のメニュー：','')}`;
+    }
+
+    const updLine = lines.find(l=>l.includes('最終更新：'));
+    if(updLine) lastUpdated.textContent=updLine;
+  }
+}
+
+function changeMonth(dir){
+  cm+=dir;
+  if(cm>11){cm=0;cy++;} if(cm<0){cm=11;cy--;}
+  fetchEvents().then(()=>{ render(); renderInfoBar(); });
+}
+
+async function retryFetch(){
+  document.getElementById('content').innerHTML=`<div class="loading"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></div>`;
+  await fetchEvents();
+  render();
+  renderInfoBar();
+}
+
+(async()=>{ await Promise.all([fetchEvents(), loadFromGist()]); render(); renderInfoBar(); initAdmin(); })();
+
+// 10秒ごとにインフォを自動更新（管理パネルが開いていない時のみ）
+setInterval(async()=>{
+  if(document.getElementById('adminPanel').style.display !== 'none') return;
+  await loadFromGist();
+  applyAdminToPage();
+}, 10000);
+
+// ===== ADMIN PANEL =====
+const ADMIN_PASS = 'm1100286';
+const DEFAULT_MENUS = ['マルゲリータ','クワトロフォルマッジ','ディアボラ','ビアンカ','サルシッチャ','バジルペスト','トマトバジル','照り焼きチキン','季節の特製ピザ','本日のおすすめ'];
+let adminMenuMaster = JSON.parse(localStorage.getItem('pub_menumaster')||'null') || [...DEFAULT_MENUS];
+let adminTodayMenus = JSON.parse(localStorage.getItem('pub_todaymenus')||'[]');
+let adminInfo = JSON.parse(localStorage.getItem('pub_info')||'{"status":"","msg":""}');
+
+const GH_OWNER = 'felice-kitchen-car';
+const GH_REPO = 'felice-calendar';
+const GH_FILE = 'info.json';
+const _a=['ghp_JXHtAwLuqr','qR4MfjlUrcM8','aToAvnFs1Kmaos'];
+let GH_TOKEN = sessionStorage.getItem('gh_token') || _a.join('');
+
+async function loadFromGist(){
+  try {
+    const res = await fetch(`https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/${GH_FILE}?t=${Date.now()}`, {cache:'no-store'});
+    if(!res.ok) return;
+    const json = await res.json();
+    adminInfo = json.info || {status:'',msg:''};
+    adminTodayMenus = json.todayMenus || [];
+    adminMenuMaster = json.menuMaster || [...DEFAULT_MENUS];
+    // localStorageには書き込まない（管理パネルの操作と干渉するため）
+  } catch(e){ console.error(e); }
+}
+
+async function saveToGist(){
+  if(!GH_TOKEN) return;
+  const content = JSON.stringify({
+    info: adminInfo,
+    todayMenus: adminTodayMenus,
+    menuMaster: adminMenuMaster,
+    lastUpdated: new Date().toISOString()
+  });
+  try {
+    let sha = '';
+    const getRes = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
+      headers: { 'Authorization': `token ${GH_TOKEN}` }
+    });
+    if(getRes.ok){
+      const getData = await getRes.json();
+      sha = getData.sha || '';
+    }
+    const body = { message: 'update info', content: btoa(unescape(encodeURIComponent(content))) };
+    if(sha) body.sha = sha;
+    await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `token ${GH_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    // jsDelivrキャッシュをクリア
+    fetch(`https://purge.jsdelivr.net/gh/${GH_OWNER}/${GH_REPO}@main/${GH_FILE}`).catch(()=>{});
+  } catch(e){ console.error(e); }
+}
+
+async function saveAdmin(){
+  adminInfo.lastUpdated = new Date().toISOString();
+  await saveToGist();
+  applyAdminToPage();
+}
+
+function applyAdminToPage(){
+  const infoBar = document.getElementById('infoBar');
+  const menuBar = document.getElementById('todayMenuBar');
+  const lastUpdated = document.getElementById('lastUpdated');
+  const statusMap = {
+    'open':['🟢 営業中','status-open'],
+    'busy':['🟡 混雑中','status-busy'],
+    'closing_soon':['🟠 まもなく終了','status-closing_soon'],
+    'closed_early':['🔴 早期終了','status-closed_early'],
+    'cancelled':['⛔ 中止','status-cancelled'],
+  };
+  if(adminInfo.status && statusMap[adminInfo.status]){
+    const [label,cls] = statusMap[adminInfo.status];
+    infoBar.className=`info-bar show ${cls}`;
+    infoBar.textContent=`${label}${adminInfo.msg?' — '+adminInfo.msg:''}`;
+  } else if(adminInfo.msg){
+    infoBar.className='info-bar show status-busy';
+    infoBar.textContent=`📢 ${adminInfo.msg}`;
+  } else {
+    infoBar.className='info-bar';
+  }
+  if(adminTodayMenus.length){
+    menuBar.className='today-menu-bar show';
+    menuBar.innerHTML=`<strong>🍕 本日のメニュー：</strong>${adminTodayMenus.join('・')}`;
+  } else {
+    menuBar.className='today-menu-bar';
+  }
+  if(adminInfo.lastUpdated){
+    const d=new Date(adminInfo.lastUpdated);
+    lastUpdated.textContent=`最終更新：${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  }
+}
+
+async function initAdmin(){
+  await loadFromGist();
+  applyAdminToPage();
+  if(location.search.includes('admin')){
+    document.getElementById('adminPanel').style.display='block';
+    document.getElementById('adminLogin').style.display='none';
+    document.getElementById('adminMain').style.display='block';
+    renderAdminPanel();
+  }
+}
+
+function adminLogin(){
+  const pw = document.getElementById('adminPwInput').value;
+  if(pw === ADMIN_PASS){
+    document.getElementById('adminLogin').style.display='none';
+    document.getElementById('adminMain').style.display='block';
+    renderAdminPanel();
+  } else {
+    document.getElementById('adminPwError').style.display='block';
+  }
+}
+
+function renderAdminPanel(){
+  const statusOptions=[
+    {val:'',label:'通常営業'},
+    {val:'open',label:'🟢 営業中'},
+    {val:'busy',label:'🟡 混雑中'},
+    {val:'closing_soon',label:'🟠 まもなく終了'},
+    {val:'closed_early',label:'🔴 早期終了'},
+    {val:'cancelled',label:'⛔ 中止'},
+  ];
+  document.getElementById('adminStatus').innerHTML=statusOptions.map(o=>`<option value="${o.val}"${adminInfo.status===o.val?' selected':''}>${o.label}</option>`).join('');
+  document.getElementById('adminMsg').value=adminInfo.msg||'';
+  renderAdminMenus();
+}
+
+function renderAdminMenus(){
+  const master = JSON.parse(localStorage.getItem('pub_menumaster')||'null') || [...DEFAULT_MENUS];
+  const today = JSON.parse(localStorage.getItem('pub_todaymenus')||'[]');
+  adminMenuMaster = master;
+  adminTodayMenus = today;
+  document.getElementById('adminMenuList').innerHTML=adminMenuMaster.map((m,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #333;">
+      <label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;font-size:14px;color:#f0ece4;">
+        <input type="checkbox" ${adminTodayMenus.includes(m)?'checked':''} onchange="toggleAdminMenu('${m.replace(/'/g,"\\'")}',this.checked)" style="width:16px;height:16px;" />
+        ${m}
+      </label>
+      <button onclick="deleteAdminMenu(${i})" style="font-size:11px;color:#888;background:transparent;border:none;cursor:pointer;padding:2px 8px;">削除</button>
+    </div>`).join('');
+  document.getElementById('adminMenuCount').textContent=adminTodayMenus.length;
+}
+
+function toggleAdminMenu(name,checked){
+  let today = JSON.parse(localStorage.getItem('pub_todaymenus')||'[]');
+  if(checked){ if(!today.includes(name)) today.push(name); }
+  else { today=today.filter(m=>m!==name); }
+  localStorage.setItem('pub_todaymenus',JSON.stringify(today));
+  adminTodayMenus=today;
+  document.getElementById('adminMenuCount').textContent=today.length;
+}
+
+function deleteAdminMenu(idx){
+  let master = JSON.parse(localStorage.getItem('pub_menumaster')||'null') || [...DEFAULT_MENUS];
+  let today = JSON.parse(localStorage.getItem('pub_todaymenus')||'[]');
+  const name=master[idx];
+  master.splice(idx,1);
+  today=today.filter(m=>m!==name);
+  localStorage.setItem('pub_menumaster',JSON.stringify(master));
+  localStorage.setItem('pub_todaymenus',JSON.stringify(today));
+  adminMenuMaster=master;
+  adminTodayMenus=today;
+  renderAdminMenus();
+}
+
+function addAdminMenu(){
+  const inp=document.getElementById('adminNewMenu');
+  const name=inp.value.trim();
+  if(!name) return;
+  let master = JSON.parse(localStorage.getItem('pub_menumaster')||'null') || [...DEFAULT_MENUS];
+  master.push(name);
+  localStorage.setItem('pub_menumaster',JSON.stringify(master));
+  adminMenuMaster=master;
+  inp.value='';
+  renderAdminMenus();
+}
+
+async function applyAndSave(){
+  adminInfo.status=document.getElementById('adminStatus').value;
+  adminInfo.msg=document.getElementById('adminMsg').value.trim();
+  // localStorageから最新のメニューデータを取得
+  adminTodayMenus = JSON.parse(localStorage.getItem('pub_todaymenus')||'[]');
+  adminMenuMaster = JSON.parse(localStorage.getItem('pub_menumaster')||'null') || [...DEFAULT_MENUS];
+  const btn = document.querySelector('#adminMain button[onclick="applyAndSave()"]');
+  if(btn){ btn.textContent='保存中...'; btn.disabled=true; }
+  await saveAdmin();
+  applyAdminToPage();
+  if(btn){ btn.textContent='保存して反映'; btn.disabled=false; }
+  document.getElementById('adminSaved').style.display='block';
+  setTimeout(()=>document.getElementById('adminSaved').style.display='none',2000);
+}
+
+async function clearStatus(){
+  adminInfo.status=''; adminInfo.msg='';
+  adminTodayMenus=[];
+  await saveAdmin();
+  applyAdminToPage();
+  renderAdminPanel();
+}
+</script>
+
+<!-- ADMIN PANEL -->
+<div id="adminPanel" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.85);overflow-y:auto;padding:20px;">
+  <div style="max-width:480px;margin:40px auto;background:#1a1a1a;border-radius:16px;border:1px solid #333;overflow:hidden;">
+    <div style="background:#111;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:15px;font-weight:500;color:#f0ece4;letter-spacing:0.05em;">FELICE 管理パネル</span>
+      <button onclick="document.getElementById('adminPanel').style.display='none'" style="background:transparent;border:none;color:#888;font-size:20px;cursor:pointer;">✕</button>
+    </div>
+
+    <div id="adminLogin" style="display:none;"></div>
+
+    <div id="adminMain" style="display:none;padding:20px 24px;">
+
+      <div style="margin-bottom:20px;">
+        <div style="font-size:11px;letter-spacing:0.2em;color:#c9a84c;margin-bottom:12px;">出店インフォメーション</div>
+        <select id="adminStatus" style="width:100%;padding:10px 12px;background:#111;border:1px solid #333;border-radius:8px;color:#f0ece4;font-size:14px;font-family:inherit;outline:none;margin-bottom:8px;"></select>
+        <input type="text" id="adminMsg" placeholder="メッセージ（任意）例：雨のため14時終了" maxlength="80"
+          style="width:100%;padding:10px 12px;background:#111;border:1px solid #333;border-radius:8px;color:#f0ece4;font-size:14px;font-family:inherit;outline:none;" />
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <div style="font-size:11px;letter-spacing:0.2em;color:#c9a84c;margin-bottom:4px;">本日のメニュー</div>
+        <div style="font-size:12px;color:#666;margin-bottom:10px;">チェックしたメニューがお客さん向けページに表示されます</div>
+        <div id="adminMenuList"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <input type="text" id="adminNewMenu" placeholder="メニューを追加..." maxlength="30"
+            style="flex:1;padding:8px 12px;background:#111;border:1px solid #333;border-radius:8px;color:#f0ece4;font-size:13px;font-family:inherit;outline:none;"
+            onkeydown="if(event.key==='Enter')addAdminMenu()" />
+          <button onclick="addAdminMenu()" style="padding:8px 14px;background:#333;color:#f0ece4;border:none;border-radius:8px;font-size:13px;cursor:pointer;">＋</button>
+        </div>
+        <div style="font-size:12px;color:#666;margin-top:8px;">選択中：<span id="adminMenuCount">0</span>品</div>
+      </div>
+
+      <div id="adminSaved" style="display:none;text-align:center;font-size:13px;color:#2d7a4f;margin-bottom:8px;">✓ 保存しました</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="applyAndSave()" style="flex:2;padding:12px;background:#c84b2f;color:#fff;border:none;border-radius:8px;font-size:14px;font-family:inherit;cursor:pointer;font-weight:500;">保存して反映</button>
+        <button onclick="clearStatus()" style="flex:1;padding:12px;background:#333;color:#888;border:none;border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer;">クリア</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
