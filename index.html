@@ -478,6 +478,9 @@ async function loadFromGist(){
     adminInfo = json.info || {status:'',msg:''};
     adminTodayMenus = json.todayMenus || [];
     adminMenuMaster = json.menuMaster || adminMenuMaster;
+    localStorage.setItem('pub_todaymenus',JSON.stringify(adminTodayMenus));
+    localStorage.setItem('pub_menumaster',JSON.stringify(adminMenuMaster));
+    localStorage.setItem('pub_info',JSON.stringify(adminInfo));
   } catch(e){ console.error(e); }
 }
 
@@ -601,14 +604,16 @@ function toggleAdminMenu(name,checked){
   if(checked) { if(!adminTodayMenus.includes(name)) adminTodayMenus.push(name); }
   else { adminTodayMenus=adminTodayMenus.filter(m=>m!==name); }
   document.getElementById('adminMenuCount').textContent=adminTodayMenus.length;
-  saveAdmin();
+  localStorage.setItem('pub_todaymenus',JSON.stringify(adminTodayMenus));
+  localStorage.setItem('pub_menumaster',JSON.stringify(adminMenuMaster));
 }
 
 function deleteAdminMenu(idx){
   const name=adminMenuMaster[idx];
   adminMenuMaster.splice(idx,1);
   adminTodayMenus=adminTodayMenus.filter(m=>m!==name);
-  saveAdmin();
+  localStorage.setItem('pub_todaymenus',JSON.stringify(adminTodayMenus));
+  localStorage.setItem('pub_menumaster',JSON.stringify(adminMenuMaster));
   renderAdminMenus();
 }
 
@@ -618,7 +623,7 @@ function addAdminMenu(){
   if(!name) return;
   adminMenuMaster.push(name);
   inp.value='';
-  saveAdmin();
+  localStorage.setItem('pub_menumaster',JSON.stringify(adminMenuMaster));
   renderAdminMenus();
 }
 
