@@ -589,6 +589,10 @@ function renderAdminPanel(){
 }
 
 function renderAdminMenus(){
+  const master = JSON.parse(localStorage.getItem('pub_menumaster')||'null') || [...DEFAULT_MENUS];
+  const today = JSON.parse(localStorage.getItem('pub_todaymenus')||'[]');
+  adminMenuMaster = master;
+  adminTodayMenus = today;
   document.getElementById('adminMenuList').innerHTML=adminMenuMaster.map((m,i)=>`
     <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #333;">
       <label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;font-size:14px;color:#f0ece4;">
@@ -601,19 +605,24 @@ function renderAdminMenus(){
 }
 
 function toggleAdminMenu(name,checked){
-  if(checked) { if(!adminTodayMenus.includes(name)) adminTodayMenus.push(name); }
-  else { adminTodayMenus=adminTodayMenus.filter(m=>m!==name); }
-  document.getElementById('adminMenuCount').textContent=adminTodayMenus.length;
-  localStorage.setItem('pub_todaymenus',JSON.stringify(adminTodayMenus));
-  localStorage.setItem('pub_menumaster',JSON.stringify(adminMenuMaster));
+  let today = JSON.parse(localStorage.getItem('pub_todaymenus')||'[]');
+  if(checked){ if(!today.includes(name)) today.push(name); }
+  else { today=today.filter(m=>m!==name); }
+  localStorage.setItem('pub_todaymenus',JSON.stringify(today));
+  adminTodayMenus=today;
+  document.getElementById('adminMenuCount').textContent=today.length;
 }
 
 function deleteAdminMenu(idx){
-  const name=adminMenuMaster[idx];
-  adminMenuMaster.splice(idx,1);
-  adminTodayMenus=adminTodayMenus.filter(m=>m!==name);
-  localStorage.setItem('pub_todaymenus',JSON.stringify(adminTodayMenus));
-  localStorage.setItem('pub_menumaster',JSON.stringify(adminMenuMaster));
+  let master = JSON.parse(localStorage.getItem('pub_menumaster')||'null') || [...DEFAULT_MENUS];
+  let today = JSON.parse(localStorage.getItem('pub_todaymenus')||'[]');
+  const name=master[idx];
+  master.splice(idx,1);
+  today=today.filter(m=>m!==name);
+  localStorage.setItem('pub_menumaster',JSON.stringify(master));
+  localStorage.setItem('pub_todaymenus',JSON.stringify(today));
+  adminMenuMaster=master;
+  adminTodayMenus=today;
   renderAdminMenus();
 }
 
@@ -621,21 +630,23 @@ function addAdminMenu(){
   const inp=document.getElementById('adminNewMenu');
   const name=inp.value.trim();
   if(!name) return;
-  adminMenuMaster.push(name);
+  let master = JSON.parse(localStorage.getItem('pub_menumaster')||'null') || [...DEFAULT_MENUS];
+  master.push(name);
+  localStorage.setItem('pub_menumaster',JSON.stringify(master));
+  adminMenuMaster=master;
   inp.value='';
-  localStorage.setItem('pub_menumaster',JSON.stringify(adminMenuMaster));
   renderAdminMenus();
 }
 
 async function applyAndSave(){
   adminInfo.status=document.getElementById('adminStatus').value;
   adminInfo.msg=document.getElementById('adminMsg').value.trim();
+  // localStorageから最新のメニューデータを取得
+  adminTodayMenus = JSON.parse(localStorage.getItem('pub_todaymenus')||'[]');
+  adminMenuMaster = JSON.parse(localStorage.getItem('pub_menumaster')||'null') || [...DEFAULT_MENUS];
   const btn = document.querySelector('#adminMain button[onclick="applyAndSave()"]');
   if(btn){ btn.textContent='保存中...'; btn.disabled=true; }
   await saveAdmin();
-  // 保存後2秒待って最新データを再取得
-  await new Promise(r=>setTimeout(r,2000));
-  await loadFromGist();
   applyAdminToPage();
   if(btn){ btn.textContent='保存して反映'; btn.disabled=false; }
   document.getElementById('adminSaved').style.display='block';
