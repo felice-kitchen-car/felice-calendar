@@ -600,12 +600,14 @@ function toggleAdminMenu(name,checked){
   if(checked) { if(!adminTodayMenus.includes(name)) adminTodayMenus.push(name); }
   else { adminTodayMenus=adminTodayMenus.filter(m=>m!==name); }
   document.getElementById('adminMenuCount').textContent=adminTodayMenus.length;
+  saveAdmin();
 }
 
 function deleteAdminMenu(idx){
   const name=adminMenuMaster[idx];
   adminMenuMaster.splice(idx,1);
   adminTodayMenus=adminTodayMenus.filter(m=>m!==name);
+  saveAdmin();
   renderAdminMenus();
 }
 
@@ -615,6 +617,7 @@ function addAdminMenu(){
   if(!name) return;
   adminMenuMaster.push(name);
   inp.value='';
+  saveAdmin();
   renderAdminMenus();
 }
 
