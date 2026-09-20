@@ -352,6 +352,7 @@ function render(){
       const timeSVG=`<svg class="meta-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>`;
       const locSVG=`<svg class="meta-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5C5.5 1.5 3.5 3.5 3.5 6c0 3.5 4.5 8.5 4.5 8.5s4.5-5 4.5-8.5c0-2.5-2-4.5-4.5-4.5z"/><circle cx="8" cy="6" r="1.5"/></svg>`;
       const linkSVG=`<svg class="meta-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.5 9.5L9.5 6.5M7 4H4.5A2 2 0 002.5 6v5.5A2 2 0 004.5 13.5H10A2 2 0 0012 11.5V9M9.5 2H13.5V6"/></svg>`;
+      const takeoutSVG=`<svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/></svg>`;
 
       // descriptionからURLと不要なFELICE_INFO行を除去してクリーンに
       let cleanDesc='', eventUrl='';
@@ -374,6 +375,7 @@ function render(){
         <div class="event-card-meta">
           ${timeStr?`<div class="event-card-row">${timeSVG}<span>${timeStr}</span></div>`:''}
           ${e.location?`<div class="event-card-row"><a href="https://maps.google.com/?q=${encodeURIComponent(e.location)}" target="_blank" style="display:flex;align-items:flex-start;gap:6px;color:var(--accent);text-decoration:none;">${locSVG}<span style="text-decoration:underline;text-underline-offset:2px;">${e.location}</span></a></div>`:''}
+          ${cleanTitle.includes('FELICE BASE')?`<div class="event-card-row"><a href="https://pizza-order-bx2.pages.dev" target="_blank" style="display:flex;align-items:flex-start;gap:6px;color:#d44f2e;text-decoration:none;font-weight:500;">${takeoutSVG}<span style="text-decoration:underline;text-underline-offset:2px;">テイクアウト注文はこちら</span></a></div>`:''}
           ${eventUrl?`<div class="event-card-row"><a href="${eventUrl}" target="_blank" style="display:flex;align-items:flex-start;gap:6px;color:#2471a3;text-decoration:none;">${linkSVG}<span style="text-decoration:underline;text-underline-offset:2px;">イベント詳細・SNSをチェック</span></a></div>`:''}
           ${cleanDesc?`<div class="event-card-row" style="color:var(--ink3);font-size:11px;margin-top:2px;padding-left:20px;">${cleanDesc}</div>`:''}
         </div>
