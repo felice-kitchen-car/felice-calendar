@@ -136,10 +136,21 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--paper); color:
 .today-menu-bar.show { display: block; }
 .today-menu-bar strong { color: var(--ink); font-weight: 500; }
 
-.last-updated {
-  text-align: right; font-size: 11px; color: var(--ink3);
-  padding: 6px 0 0; letter-spacing: 0.05em;
+.last-updated-row {
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  padding: 6px 0 0;
 }
+.last-updated {
+  font-size: 11px; color: var(--ink3); letter-spacing: 0.05em;
+}
+.refresh-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-family: inherit; letter-spacing: 0.03em;
+  color: var(--accent); background: transparent; border: 1px solid var(--accent);
+  border-radius: 999px; padding: 3px 10px; cursor: pointer; transition: background .15s;
+}
+.refresh-btn:hover { background: rgba(212,79,46,0.08); }
+.refresh-btn svg { width: 11px; height: 11px; }
 
 </style>
 </head>
@@ -183,7 +194,13 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--paper); color:
   <button class="nav-btn" onclick="changeMonth(1)">&#8250;</button>
 </div>
 <div class="main">
-  <div id="lastUpdated" class="last-updated"></div>
+  <div class="last-updated-row">
+    <span id="lastUpdated" class="last-updated"></span>
+    <button class="refresh-btn" onclick="hardRefresh()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 11-3-6.7"/><path d="M21 3v6h-6"/></svg>
+      更新
+    </button>
+  </div>
   <div id="content">
     <div class="loading">
       <span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>
@@ -194,6 +211,12 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--paper); color:
 
 <script>
 const DOW = ['日','月','火','水','木','金','土'];
+
+// キャッシュを飛ばして確実に最新版を取得する
+function hardRefresh(){
+  const url = location.pathname + '?v=' + Date.now();
+  location.href = url;
+}
 const today = new Date();
 let cy = today.getFullYear(), cm = today.getMonth();
 let allEvents = [];
