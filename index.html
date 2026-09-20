@@ -375,7 +375,7 @@ function render(){
         <div class="event-card-meta">
           ${timeStr?`<div class="event-card-row">${timeSVG}<span>${timeStr}</span></div>`:''}
           ${e.location?`<div class="event-card-row"><a href="https://maps.google.com/?q=${encodeURIComponent(e.location)}" target="_blank" style="display:flex;align-items:flex-start;gap:6px;color:var(--accent);text-decoration:none;">${locSVG}<span style="text-decoration:underline;text-underline-offset:2px;">${e.location}</span></a></div>`:''}
-          ${cleanTitle.includes('FELICE BASE')?`<div class="event-card-row"><a href="https://pizza-order-bx2.pages.dev" target="_blank" style="display:flex;align-items:flex-start;gap:6px;color:#2471a3;text-decoration:none;font-weight:500;">${takeoutSVG}<span style="text-decoration:underline;text-underline-offset:2px;">テイクアウト注文はこちら</span></a></div>`:''}
+          ${cleanTitle.includes('FELICE BASE')?`<div class="event-card-row"><a href="https://pizza-order-bx2.pages.dev" target="_blank" style="display:flex;align-items:flex-start;gap:6px;color:#2471a3;text-decoration:none;font-weight:700;">${takeoutSVG}<span style="text-decoration:underline;text-underline-offset:2px;">テイクアウト注文はこちら</span></a></div>`:''}
           ${eventUrl?`<div class="event-card-row"><a href="${eventUrl}" target="_blank" style="display:flex;align-items:flex-start;gap:6px;color:#2471a3;text-decoration:none;">${linkSVG}<span style="text-decoration:underline;text-underline-offset:2px;">イベント詳細・SNSをチェック</span></a></div>`:''}
           ${cleanDesc?`<div class="event-card-row" style="color:var(--ink3);font-size:11px;margin-top:2px;padding-left:20px;">${cleanDesc}</div>`:''}
         </div>
