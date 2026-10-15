@@ -135,6 +135,18 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--paper); color:
 }
 .today-menu-bar.show { display: block; }
 .today-menu-bar strong { color: var(--ink); font-weight: 500; }
+.today-bar {
+  background: #fff; border-bottom: 1px solid var(--paper3);
+  padding: 10px 24px; font-size: 13px; color: var(--ink); display: none;
+}
+.today-bar.show { display: block; }
+.today-bar .tb-row { padding: 2px 0; }
+.today-bar strong { font-weight: 700; }
+.kind-badge {
+  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: #fff;
+  background: var(--accent); padding: 2px 10px; border-radius: 999px; margin-left: 8px; vertical-align: middle;
+}
+.kind-badge.event { background: #2471a3; }
 
 .last-updated-row {
   display: flex; align-items: center; justify-content: flex-end; gap: 10px;
@@ -187,6 +199,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--paper); color:
 </div>
 </div>
 <div id="infoBar" class="info-bar"></div>
+<div id="todayBar" class="today-bar"></div>
 <div id="todayMenuBar" class="today-menu-bar"></div>
 <div class="nav-bar">
   <button class="nav-btn" onclick="changeMonth(-1)">&#8249;</button>
@@ -225,6 +238,30 @@ let loaded = false;
 const EVENTS_URL = 'https://pizza-order-bx2.pages.dev/api/calendar';
 const STATUS_LABELS = {open:'🟢 営業中',busy:'🟡 混雑中',closing_soon:'🟠 まもなく終了',closed_early:'🔴 早期終了',cancelled:'⛔ 中止'};
 
+const KIND_LABEL = {lunch:'ランチ出店', dinner:'ディナー出店', both:'ランチ＆ディナー出店', event:'イベント出店'};
+
+// 本日の出店（時間・種別）を、カレンダーの予定から自動で表示する
+function renderTodayBar(){
+  const bar = document.getElementById('todayBar');
+  if(!bar) return;
+  if(!loaded){ bar.className = 'today-bar'; return; }
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const ds = new Date(Date.now() + 9*3600*1000).toISOString().slice(0,10); // 日本時間の今日
+  const list = allEvents.filter(e => e.date === ds)
+    .sort((a,b) => (a.startTime||'').localeCompare(b.startTime||''));
+  if(!list.length){
+    bar.innerHTML = '<div class="tb-row"><strong>📍 本日の出店：</strong>本日は出店予定がありません</div>';
+  } else {
+    bar.innerHTML = list.map(e => {
+      const time = e.hasTime && e.startTime ? '　' + e.startTime + '〜' + (e.endTime || '') : '';
+      const badge = e.kind && KIND_LABEL[e.kind]
+        ? '<span class="kind-badge' + (e.kind === 'event' ? ' event' : '') + '">' + KIND_LABEL[e.kind] + '</span>' : '';
+      return '<div class="tb-row"><strong>📍 本日の出店：</strong>' + esc(e.loc) + time + badge + '</div>';
+    }).join('');
+  }
+  bar.className = 'today-bar show';
+}
+
 async function fetchEvents(){
   try {
     const res = await fetch(EVENTS_URL + '?t=' + Date.now(), {cache:'no-store'});
@@ -246,6 +283,7 @@ async function fetchEvents(){
       if(e.statusMsg) descLines.push(e.statusMsg);
       if(e.eventUrl) descLines.push('🔗 ' + e.eventUrl);
       return {
+        date: e.date, loc: e.loc, kind: e.kind || '',
         summary: `${e.changed?'【変更】':''}【出店】${e.loc}`,
         location: e.address || e.loc,
         description: descLines.join('\n'),
@@ -433,7 +471,7 @@ function renderInfoBar(){
 function changeMonth(dir){
   cm+=dir;
   if(cm>11){cm=0;cy++;} if(cm<0){cm=11;cy--;}
-  fetchEvents().then(()=>{ render(); renderInfoBar(); });
+  fetchEvents().then(()=>{ render(); renderInfoBar(); renderTodayBar(); });
 }
 
 async function retryFetch(){
@@ -441,15 +479,24 @@ async function retryFetch(){
   await fetchEvents();
   render();
   renderInfoBar();
+  renderTodayBar();
 }
 
-(async()=>{ await Promise.all([fetchEvents(), loadFromGist()]); render(); renderInfoBar(); initAdmin(); })();
+(async()=>{ await Promise.all([fetchEvents(), loadFromGist()]); render(); renderInfoBar(); renderTodayBar(); initAdmin(); })();
 
 // 10秒ごとにインフォを自動更新（管理パネルが開いていない時のみ）
 setInterval(async()=>{
   await loadFromGist();
   applyAdminToPage();
 }, 10000);
+
+// 1分ごとに予定を取り直して「本日の出店」を更新（日付が変わった時も自動で切り替わる）
+setInterval(async()=>{
+  const was = loaded;
+  await fetchEvents();
+  if(!loaded && was) loaded = true;   // 一時的な通信失敗で画面を壊さない
+  renderTodayBar();
+}, 60000);
 
 // ===== ADMIN PANEL =====
 const DEFAULT_MENUS = ['マルゲリータ','クワトロフォルマッジ','ディアボラ','ビアンカ','サルシッチャ','バジルペスト','トマトバジル','照り焼きチキン','季節の特製ピザ','本日のおすすめ'];
