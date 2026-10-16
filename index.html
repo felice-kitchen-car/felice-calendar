@@ -249,19 +249,21 @@ function renderTodayBar(){
   if(!loaded){ bar.className = 'today-bar'; return; }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const ds = new Date(Date.now() + 9*3600*1000).toISOString().slice(0,10); // 日本時間の今日
+  const jst = new Date(Date.now() + 9*3600*1000);
+  const dateLabel = (jst.getUTCMonth()+1) + '/' + jst.getUTCDate() + '(' + DOW[jst.getUTCDay()] + ')'; // 例: 10/16(金)
   const list = allEvents.filter(e => e.date === ds)
     .sort((a,b) => (a.startTime||'').localeCompare(b.startTime||''));
   if(!list.length){
     const closedMsg = todayState === 'cancelled' ? ['本日の出店は中止です', '中止']
                     : todayState === 'pending'   ? ['本日の出店は日程調整中です', '調整中']
                     :                              ['本日はお休みです', '休み'];
-    bar.innerHTML = '<div class="tb-row"><strong>' + Number(ds.slice(5,7)) + '月' + Number(ds.slice(8,10)) + '日（' + DOW[new Date(ds + 'T00:00:00Z').getUTCDay()] + '）　' + closedMsg[0] + '</strong><span class="kind-badge closed">' + closedMsg[1] + '</span></div>';
+    bar.innerHTML = '<div class="tb-row"><strong>📅 ' + dateLabel + '　' + closedMsg[0] + '</strong><span class="kind-badge closed">' + closedMsg[1] + '</span></div>';
   } else {
     bar.innerHTML = list.map(e => {
       const time = e.hasTime && e.startTime ? '　' + e.startTime + '〜' + (e.endTime || '') : '';
       const badge = e.kind && KIND_LABEL[e.kind]
         ? '<span class="kind-badge' + (e.kind === 'event' ? ' event' : '') + '">' + KIND_LABEL[e.kind] + '</span>' : '';
-      return '<div class="tb-row"><strong>📍 本日の出店：</strong>' + esc(e.loc) + time + badge + '</div>';
+      return '<div class="tb-row"><strong>📍 本日の出店 ' + dateLabel + '：</strong>' + esc(e.loc) + time + badge + '</div>';
     }).join('');
   }
   bar.className = 'today-bar show';
