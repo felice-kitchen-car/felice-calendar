@@ -255,7 +255,7 @@ function renderTodayBar(){
     const closedMsg = todayState === 'cancelled' ? ['本日の出店は中止です', '中止']
                     : todayState === 'pending'   ? ['本日の出店は日程調整中です', '調整中']
                     :                              ['本日はお休みです', '休み'];
-    bar.innerHTML = '<div class="tb-row"><strong>📅 ' + closedMsg[0] + '</strong><span class="kind-badge closed">' + closedMsg[1] + '</span></div>';
+    bar.innerHTML = '<div class="tb-row"><strong>' + Number(ds.slice(5,7)) + '月' + Number(ds.slice(8,10)) + '日（' + DOW[new Date(ds + 'T00:00:00Z').getUTCDay()] + '）　' + closedMsg[0] + '</strong><span class="kind-badge closed">' + closedMsg[1] + '</span></div>';
   } else {
     bar.innerHTML = list.map(e => {
       const time = e.hasTime && e.startTime ? '　' + e.startTime + '〜' + (e.endTime || '') : '';
