@@ -137,11 +137,22 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--paper); color:
 .today-menu-bar strong { color: var(--ink); font-weight: 500; }
 .today-bar {
   background: #fff; border-bottom: 1px solid var(--paper3);
-  padding: 10px 24px; font-size: 13px; color: var(--ink); display: none;
+  padding: 12px 24px 10px; color: var(--ink); display: none;
 }
 .today-bar.show { display: block; }
-.today-bar .tb-row { padding: 2px 0; }
-.today-bar strong { font-weight: 700; }
+.tb-head { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink2); margin-bottom: 4px; }
+.tb-head strong { font-weight: 700; color: var(--ink); }
+.tb-date { font-weight: 700; color: var(--accent); letter-spacing: .03em; }
+.tb-item { padding: 6px 0; }
+.tb-item + .tb-item { border-top: 1px solid var(--paper3); }
+.tb-name {
+  font-size: 16px; font-weight: 700; line-height: 1.45;
+  text-wrap: balance;            /* 長い名前でも各行の長さをそろえて折り返す */
+  word-break: auto-phrase;       /* 対応ブラウザでは、日本語を単語のまとまりで折り返す */
+  overflow-wrap: anywhere;       /* 区切りのない長い英数字名でもはみ出さない */
+}
+.tb-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; font-size: 13px; color: var(--ink2); }
+.tb-meta .kind-badge { margin-left: 0; }
 .kind-badge {
   display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: #fff;
   background: var(--accent); padding: 2px 10px; border-radius: 999px; margin-left: 8px; vertical-align: middle;
@@ -257,14 +268,20 @@ function renderTodayBar(){
     const closedMsg = todayState === 'cancelled' ? ['本日の出店は中止です', '中止']
                     : todayState === 'pending'   ? ['本日の出店は日程調整中です', '調整中']
                     :                              ['本日はお休みです', '休み'];
-    bar.innerHTML = '<div class="tb-row"><strong>📅 ' + dateLabel + '　' + closedMsg[0] + '</strong><span class="kind-badge closed">' + closedMsg[1] + '</span></div>';
+    bar.innerHTML =
+        '<div class="tb-head"><strong>📅 本日</strong><span class="tb-date">' + dateLabel + '</span></div>'
+      + '<div class="tb-item"><div class="tb-name">' + closedMsg[0] + '</div>'
+      + '<div class="tb-meta"><span class="kind-badge closed">' + closedMsg[1] + '</span></div></div>';
   } else {
-    bar.innerHTML = list.map(e => {
-      const time = e.hasTime && e.startTime ? '　' + e.startTime + '〜' + (e.endTime || '') : '';
-      const badge = e.kind && KIND_LABEL[e.kind]
-        ? '<span class="kind-badge' + (e.kind === 'event' ? ' event' : '') + '">' + KIND_LABEL[e.kind] + '</span>' : '';
-      return '<div class="tb-row"><strong>📍 本日の出店 ' + dateLabel + '：</strong>' + esc(e.loc) + time + badge + '</div>';
-    }).join('');
+    bar.innerHTML =
+        '<div class="tb-head"><strong>📍 本日の出店</strong><span class="tb-date">' + dateLabel + '</span></div>'
+      + list.map(e => {
+          const time = e.hasTime && e.startTime ? '<span>🕒 ' + e.startTime + '〜' + (e.endTime || '') + '</span>' : '';
+          const badge = e.kind && KIND_LABEL[e.kind]
+            ? '<span class="kind-badge' + (e.kind === 'event' ? ' event' : '') + '">' + KIND_LABEL[e.kind] + '</span>' : '';
+          return '<div class="tb-item"><div class="tb-name">' + esc(e.loc) + '</div>'
+               + (time || badge ? '<div class="tb-meta">' + time + badge + '</div>' : '') + '</div>';
+        }).join('');
   }
   bar.className = 'today-bar show';
 }
